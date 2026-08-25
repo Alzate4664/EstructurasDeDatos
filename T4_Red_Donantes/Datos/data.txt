@@ -1,0 +1,12 @@
+Ana 25 O+ Riñon 2 Carlos Elena
+Carlos 30 A- Corazon 2 Ana Beatriz
+Beatriz 22 AB+ Higado 1 Carlos
+David 28 B- Riñon 1 Elena
+Elena 35 O- Pulmon 2 Ana David
+Fernando 29 A+ Riñon 1 Gabriela
+Gabriela 21 O+ Higado 1 Fernando
+Hugo 25 AB- Corazon 2 Irene Javier
+Irene 28 B+ Pulmon 1 Hugo
+Javier 40 A+ Riñon 1 Hugo
+Luis 50 AB- Higado 1 Ana
+Edison 54 O+ Corazón 3 Beatriz Hugo Io
