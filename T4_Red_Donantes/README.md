@@ -83,7 +83,7 @@ En el archivo `HashTable.cpp`, utilizamos el **Nombre** del paciente como "Llave
 La ecuación matemática exacta implementada en el sistema es la siguiente:
 
 $$
-h(\text{Nombre}) = \left( \sum_{i=1}^{L} \text{valor\_ASCII}(\text{Nombre}_i) \right) \pmod M
+h(\text{Nombre}) = \left( \sum_{i=1}^{L} \text{ASCII}(\text{Nombre}_{i}) \right) \pmod M
 $$
 
 *Donde:*
