@@ -268,12 +268,12 @@ void buscarContactosBFS(int paciente_cero, std::vector<std::vector<int>>& red) {
 ### Esquema Visual
 ```mermaid
 graph LR
-    P[ID Paciente: 1024] --> H{Función Hash}
+    P["ID Paciente: 1024"] --> H{"Función Hash"}
     
     subgraph Memoria Caché O 1
-    H --> T1[ID: 1020 | Riesgo: 12%]
-    H --> T2[ID: 1024 | Riesgo: 85.5%]
-    H --> T3[ID: 1055 | Riesgo: 40%]
+    H --> T1["ID: 1020 - Riesgo: 12%"]
+    H --> T2["ID: 1024 - Riesgo: 85.5%"]
+    H --> T3["ID: 1055 - Riesgo: 40%"]
     end
     
     style T2 fill:#ccffcc,stroke:#009900,stroke-width:2px
