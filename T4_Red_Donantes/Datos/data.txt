@@ -10,3 +10,6 @@ Irene 28 B+ Pulmon 1 Hugo
 Javier 40 A+ Riñon 1 Hugo
 Luis 50 AB- Higado 1 Ana
 Edison 54 O+ Corazón 3 Beatriz Hugo Io
+Carolina 25 O- Riñon 3 David Fernando Gertrudis
+Sinforoso 41 AB+ Oreja 1 Elena
+Hilario 60 B- Cerebro 1 Edison

@@ -9,6 +9,7 @@
 #include "BST.h"
 #include "HashTable.h"
 #include "Graph.h"
+#include "BinaryTree.h"
 
 /*
  * DEFINICIÓN: Módulo Visualizador (Patrón Arquitectónico de Capas)
@@ -25,6 +26,7 @@ namespace Visualizer {
     void printStack(const Stack& stack);
     void printQueue(const Queue& queue);
     void printBST(const BST& bst);
+    void printBinaryTree(const BinaryTree& bt);
     void printHashTable(const HashTable& ht);
     void printGraph(const Graph& graph);
 }

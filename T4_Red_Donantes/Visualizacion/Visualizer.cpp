@@ -32,7 +32,7 @@ namespace Visualizer {
         ListNode* temp = list.head;
         std::cout << CYAN;
         while (temp) {
-            std::cout << "[" << temp->data.nombre << "] -> ";
+            std::cout << "[" << temp->data.nombre << " Edad:" << temp->data.edad << "] -> ";
             temp = temp->next;
         }
         std::cout << RED << "NULL\n" << RESET;
@@ -86,6 +86,22 @@ namespace Visualizer {
         std::cout << "\n";
     }
 
+    void printBT2DUtil(BTNode* root, int space) {
+        if (root == nullptr) return;
+        space += 8;
+        printBT2DUtil(root->right, space);
+        std::cout << "\n";
+        for (int i = 8; i < space; i++) std::cout << " ";
+        std::cout << GREEN << "---[" << YELLOW << root->data.nombre << " (" << root->data.edad << ")" << GREEN << "]\n" << RESET;
+        printBT2DUtil(root->left, space);
+    }
+
+    void printBinaryTree(const BinaryTree& bt) {
+        std::cout << CYAN << "Representación 2D del Árbol Binario:\n" << RESET;
+        printBT2DUtil(bt.root, 0);
+        std::cout << "\n";
+    }
+
     void printHashTable(const HashTable& ht) {
         for (int i = 0; i < ht.tableSize; i++) {
             std::cout << BOLD << BLUE << "[Bucket " << std::setw(2) << std::setfill('0') << i << "] " << RESET << "-> ";
@@ -101,20 +117,25 @@ namespace Visualizer {
     }
 
     void printGraph(const Graph& graph) {
+        std::cout << CYAN << "========================================================\n" << RESET;
+        std::cout << YELLOW << "   Representación del Grafo (Red Médica)\n" << RESET;
+        std::cout << CYAN << "========================================================\n" << RESET;
         for (auto const& pair : graph.vertices) {
             GraphNode* node = pair.second;
-            std::cout << BOLD << CYAN << " ( " << node->data.nombre << " | " << node->data.tipoSangre << " ) " 
-                      << RESET << MAGENTA << " == conecta con ==>  " << RESET;
+            std::cout << BOLD << BLUE << " ┌─ Vértice: " << RESET << CYAN << node->data.nombre 
+                      << YELLOW << " (" << node->data.tipoSangre << ", " << node->data.organo << ")\n" << RESET;
                       
             if (node->matches.empty()) {
-                std::cout << RED << "Nadie\n" << RESET;
+                std::cout << BOLD << BLUE << " └─ Aristas: " << RED << "Ninguna conexión compatible.\n" << RESET;
             } else {
+                std::cout << BOLD << BLUE << " └─ Aristas: " << RESET;
                 for (size_t i = 0; i < node->matches.size(); i++) {
-                    std::cout << GREEN << node->matches[i]->data.nombre << YELLOW << " (" << node->matches[i]->data.organo << ")" << RESET
-                              << (i < node->matches.size() - 1 ? MAGENTA + std::string(" - ") + RESET : "");
+                    std::cout << GREEN << "──> [" << node->matches[i]->data.nombre << " | " << node->matches[i]->data.organo << "]" << RESET;
+                    if (i < node->matches.size() - 1) std::cout << " ";
                 }
                 std::cout << "\n";
             }
+            std::cout << "\n";
         }
     }
 }

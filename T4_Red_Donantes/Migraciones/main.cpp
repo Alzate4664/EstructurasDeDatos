@@ -10,6 +10,7 @@
 #include "BST.h"
 #include "HashTable.h"
 #include "Graph.h"
+#include "BinaryTree.h"
 #include "Visualizer.h"
 #include "Colors.h"
 
@@ -82,6 +83,13 @@ void collectBST(TreeNode* node, vector<Person>& buf) {
     collectBST(node->right, buf);
 }
 
+void collectBT(BTNode* node, vector<Person>& buf) {
+    if (!node) return;
+    collectBT(node->left, buf);
+    buf.push_back(node->data);
+    collectBT(node->right, buf);
+}
+
 int mostrarMenu(const string& titulo) {
     cout << "\n" << BOLD << CYAN << "=== " << titulo << " ===" << RESET << "\n";
     cout << "1. Lista Ligada Simple\n";
@@ -89,9 +97,10 @@ int mostrarMenu(const string& titulo) {
     cout << "3. Pila (Stack LIFO)\n";
     cout << "4. Cola (Queue FIFO)\n";
     cout << "5. Árbol Binario de Búsqueda (BST - Ordena por Edad)\n";
-    cout << "6. Tabla Hash (Búsqueda por nombre)\n";
-    cout << "7. Grafo (Red Médica de Compatibilidad Cruzada)\n";
-    cout << "8. Volver al menú principal\n";
+    cout << "6. Árbol Binario Simple (Inserción por niveles)\n";
+    cout << "7. Tabla Hash (Búsqueda por nombre)\n";
+    cout << "8. Grafo (Red Médica de Compatibilidad Cruzada)\n";
+    cout << "9. Volver al menú principal\n";
     cout << BOLD << YELLOW << "Seleccione una opción: " << RESET;
     int opt;
     if (!(cin >> opt)) {
@@ -146,6 +155,13 @@ void ejecutarMigracion(int src, int dst, const vector<Person>& rawData) {
             collectBST(o.root, buffer);
             break;
         }
+        case 6: {
+            BinaryTree o;
+            for (const auto& p : rawData) o.insertar(p);
+            printBinaryTree(o);
+            collectBT(o.root, buffer);
+            break;
+        }
         default:
             cout << RED << "Opción de origen inválida.\n" << RESET;
             return;
@@ -159,8 +175,9 @@ void ejecutarMigracion(int src, int dst, const vector<Person>& rawData) {
         case 3: { Stack d; for (const auto& p : buffer) d.push(p); printStack(d); break; }
         case 4: { Queue d; for (const auto& p : buffer) d.enqueue(p); printQueue(d); break; }
         case 5: { BST d; for (const auto& p : buffer) d.insertar(p); printBST(d); break; }
-        case 6: { HashTable d; for (const auto& p : buffer) d.insertar(p); printHashTable(d); break; }
-        case 7: { Graph d; for (const auto& p : buffer) d.addPerson(p); d.buildCompatibilityTies(); printGraph(d); break; }
+        case 6: { BinaryTree d; for (const auto& p : buffer) d.insertar(p); printBinaryTree(d); break; }
+        case 7: { HashTable d; for (const auto& p : buffer) d.insertar(p); printHashTable(d); break; }
+        case 8: { Graph d; for (const auto& p : buffer) d.addPerson(p); d.buildCompatibilityTies(); printGraph(d); break; }
         default: cout << RED << "Destino no válido.\n" << RESET; return;
     }
 }
@@ -204,14 +221,14 @@ int main() {
 
         if (mainOpt == 1) {
             int src = mostrarMenu("SELECCIONE ESTRUCTURA DE ORIGEN");
-            if (src == 8 || src == -1) continue;
-            if (src == 6 || src == 7) {
+            if (src == 9 || src == -1) continue;
+            if (src == 7 || src == 8) {
                 cout << RED << "Advertencia: Hash y Grafos no son estructuras de origen en esta demo.\n" << RESET;
                 continue;
             }
 
             int dst = mostrarMenu("SELECCIONE ESTRUCTURA DE DESTINO");
-            if (dst == 8 || dst == -1) continue;
+            if (dst == 9 || dst == -1) continue;
 
             ejecutarMigracion(src, dst, rawData);
             

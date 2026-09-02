@@ -20,7 +20,7 @@
 
 class HashTable {
 public:
-    static const int tableSize = 10; // Número de "cajones" o Buckets
+    static const int tableSize = 5; // Número de "cajones" o Buckets
     std::list<Person> table[tableSize]; // Arreglo de listas (Chaining)
     
     // Convierte el Nombre en un número del 0 al 9

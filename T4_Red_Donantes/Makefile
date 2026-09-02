@@ -6,7 +6,7 @@ TARGET = bin/demo_estructuras
 DATOS_SRC = Datos/Person.cpp
 ESTR_SRC = Estructuras/LinkedList.cpp Estructuras/DoublyLinkedList.cpp \
            Estructuras/Stack.cpp Estructuras/Queue.cpp Estructuras/BST.cpp \
-           Estructuras/HashTable.cpp Estructuras/Graph.cpp
+           Estructuras/HashTable.cpp Estructuras/Graph.cpp Estructuras/BinaryTree.cpp
 VIS_SRC = Visualizacion/Visualizer.cpp
 MIG_SRC = Migraciones/main.cpp
 
