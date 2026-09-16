@@ -46,6 +46,120 @@ NodoBPlus* ArbolBPlus::buscarHoja(int clave) {
     return cursor;
 }
 
+NodoBPlus* ArbolBPlus::buscarPadre(
+    NodoBPlus* cursor,
+    NodoBPlus* hijo
+) {
+    if (cursor == nullptr || cursor->es_hoja) {
+        return nullptr;
+    }
+
+    // Comprobar si cursor es el padre directo.
+    for (NodoBPlus* candidato : cursor->hijos) {
+        if (candidato == hijo) {
+            return cursor;
+        }
+    }
+
+    // Buscar recursivamente en los niveles inferiores.
+    for (NodoBPlus* candidato : cursor->hijos) {
+        NodoBPlus* padreEncontrado = buscarPadre(
+            candidato,
+            hijo
+        );
+
+        if (padreEncontrado != nullptr) {
+            return padreEncontrado;
+        }
+    }
+
+    return nullptr;
+}
+
+void ArbolBPlus::insertarInterno(
+    int clave,
+    NodoBPlus* cursor,
+    NodoBPlus* hijo
+) {
+    size_t posicion = 0;
+
+    while (
+        posicion < cursor->claves.size() &&
+        cursor->claves[posicion] < clave
+    ) {
+        posicion++;
+    }
+
+    // La clave separadora se inserta en posicion.
+    cursor->claves.insert(
+        cursor->claves.begin() + posicion,
+        clave
+    );
+
+    // El nuevo hijo queda inmediatamente después de la clave.
+    cursor->hijos.insert(
+        cursor->hijos.begin() + posicion + 1,
+        hijo
+    );
+
+    // Si el nodo interno sigue dentro del límite, terminamos.
+    if (cursor->claves.size() <= static_cast<size_t>(grado)) {
+        return;
+    }
+
+    // El nodo interno se desbordó: hay que dividirlo.
+    size_t puntoMedio = cursor->claves.size() / 2;
+    int clavePromovida = cursor->claves[puntoMedio];
+
+    NodoBPlus* nuevoInterno = new NodoBPlus(false);
+
+    // Las claves posteriores a la promovida pasan al nuevo nodo.
+    nuevoInterno->claves.assign(
+        cursor->claves.begin() + puntoMedio + 1,
+        cursor->claves.end()
+    );
+
+    // Los hijos de la parte derecha pasan al nuevo nodo.
+    nuevoInterno->hijos.assign(
+        cursor->hijos.begin() + puntoMedio + 1,
+        cursor->hijos.end()
+    );
+
+    // El nodo original conserva la parte izquierda.
+    cursor->claves.erase(
+        cursor->claves.begin() + puntoMedio,
+        cursor->claves.end()
+    );
+
+    cursor->hijos.erase(
+        cursor->hijos.begin() + puntoMedio + 1,
+        cursor->hijos.end()
+    );
+
+    // Si se dividió la raíz, crear una nueva raíz.
+    if (cursor == raiz) {
+        NodoBPlus* nuevaRaiz = new NodoBPlus(false);
+
+        nuevaRaiz->claves.push_back(clavePromovida);
+        nuevaRaiz->hijos.push_back(cursor);
+        nuevaRaiz->hijos.push_back(nuevoInterno);
+
+        raiz = nuevaRaiz;
+        return;
+    }
+
+    // Propagar la división al nivel superior.
+    NodoBPlus* padre = buscarPadre(raiz, cursor);
+
+    if (padre != nullptr) {
+        insertarInterno(
+            clavePromovida,
+            padre,
+            nuevoInterno
+        );
+    }
+}
+
 // =========================================================================
 // MÉTODOS A IMPLEMENTAR PARA EL PARCIAL
 // =========================================================================
@@ -113,10 +227,64 @@ void ArbolBPlus::insertar(int clave, string datos) {
 
     cout << "Registro insertado correctamente.\n";
 
-    // Temporalmente, avisar cuando corresponda realizar el split.
+    // Si la hoja supera el máximo de claves, realizar el split.
     if (hoja->claves.size() > static_cast<size_t>(grado)) {
-        cout << "[Pendiente] El nodo superó las " << grado
-             << " claves. Se debe realizar el split.\n";
+        size_t puntoMedio = hoja->claves.size() / 2;
+
+        NodoBPlus* nuevaHoja = new NodoBPlus(true);
+
+        // Mover la segunda mitad de claves y registros.
+        nuevaHoja->claves.assign(
+            hoja->claves.begin() + puntoMedio,
+            hoja->claves.end()
+        );
+
+        nuevaHoja->registros.assign(
+            hoja->registros.begin() + puntoMedio,
+            hoja->registros.end()
+        );
+
+        // La hoja original conserva la primera mitad.
+        hoja->claves.erase(
+            hoja->claves.begin() + puntoMedio,
+            hoja->claves.end()
+        );
+
+        hoja->registros.erase(
+            hoja->registros.begin() + puntoMedio,
+            hoja->registros.end()
+        );
+
+        // Conectar las hojas como una lista enlazada.
+        nuevaHoja->siguiente_hoja = hoja->siguiente_hoja;
+        hoja->siguiente_hoja = nuevaHoja;
+
+        // En un B+, se copia al padre la primera clave de la nueva hoja.
+        int clavePromovida = nuevaHoja->claves.front();
+
+        // Caso especial: la hoja dividida era la raíz.
+        if (hoja == raiz) {
+            NodoBPlus* nuevaRaiz = new NodoBPlus(false);
+
+            nuevaRaiz->claves.push_back(clavePromovida);
+            nuevaRaiz->hijos.push_back(hoja);
+            nuevaRaiz->hijos.push_back(nuevaHoja);
+
+            raiz = nuevaRaiz;
+        } else {
+            NodoBPlus* padre = buscarPadre(raiz, hoja);
+
+            if (padre != nullptr) {
+                insertarInterno(
+                    clavePromovida,
+                    padre,
+                    nuevaHoja
+                );
+            }
+        }
+
+        cout << "Split realizado correctamente. Clave promovida: "
+             << clavePromovida << ".\n";
     }
 }
 
