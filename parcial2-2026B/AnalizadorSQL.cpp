@@ -17,6 +17,18 @@ string AnalizadorSQL::aMayusculas(string cadena) {
     return cadenaMayus;
 }
 
+string AnalizadorSQL::recortar(string cadena) {
+    size_t inicio = cadena.find_first_not_of(" \t\r\n");
+
+    if (inicio == string::npos) {
+        return "";
+    }
+
+    size_t fin = cadena.find_last_not_of(" \t\r\n");
+
+    return cadena.substr(inicio, fin - inicio + 1);
+}
+
 void AnalizadorSQL::ejecutarConsulta(string consulta) {
     if (consulta.empty()) return;
 
@@ -67,11 +79,84 @@ void AnalizadorSQL::analizarDQL_DML(string consulta, string comando) {
     // del string `consulta`. Puede usar manipulacion de strings (`find`, `substr`) o Expresiones Regulares (regex).
     
     if (comando == "INSERT") {
-        // Ejemplo esperado del usuario: INSERT INTO tabla VALUES (10, 'Ejemplo Dato')
-        // 1. Extraer el '10' como entero.
-        // 2. Extraer el contenido entre las comillas simples "'Ejemplo Dato'" como string.
-        // 3. Ejecutar: bd->insertar(10, "'Ejemplo Dato'");
-        cout << "[Ejecutando DML] -> Analizando INSERT. (Debe llamar a ArbolBPlus::insertar)\n";
+        // Ejemplo esperado:
+        // INSERT INTO usuarios VALUES (10, 'Juan Perez')
+
+        string consultaMayuscula = aMayusculas(consulta);
+        size_t posicionValues = consultaMayuscula.find("VALUES");
+
+        if (posicionValues == string::npos) {
+            cout << "Error: la instruccion INSERT debe contener VALUES.\n";
+            return;
+        }
+
+        size_t parentesisInicial = consulta.find('(', posicionValues);
+        size_t parentesisFinal = consulta.rfind(')');
+
+        if (
+            parentesisInicial == string::npos ||
+            parentesisFinal == string::npos ||
+            parentesisFinal <= parentesisInicial
+        ) {
+            cout << "Error: los valores deben estar entre parentesis.\n";
+            return;
+        }
+
+        string contenido = consulta.substr(
+            parentesisInicial + 1,
+            parentesisFinal - parentesisInicial - 1
+        );
+
+        // La primera coma separa el ID del resto de los datos.
+        size_t posicionComa = contenido.find(',');
+
+        if (posicionComa == string::npos) {
+            cout << "Error: debe ingresar un ID y los datos del registro.\n";
+            return;
+        }
+
+        string textoClave = recortar(
+            contenido.substr(0, posicionComa)
+        );
+
+        string datos = recortar(
+            contenido.substr(posicionComa + 1)
+        );
+
+        if (textoClave.empty() || datos.empty()) {
+            cout << "Error: el ID y los datos no pueden estar vacios.\n";
+            return;
+        }
+
+        // Quitar comillas simples o dobles alrededor de los datos.
+        if (
+            datos.size() >= 2 &&
+            (
+                (datos.front() == '\'' && datos.back() == '\'') ||
+                (datos.front() == '"' && datos.back() == '"')
+            )
+        ) {
+            datos = datos.substr(1, datos.size() - 2);
+        }
+
+        try {
+            size_t caracteresProcesados = 0;
+            int clave = stoi(textoClave, &caracteresProcesados);
+
+            // Evitar aceptar valores como "10abc".
+            if (caracteresProcesados != textoClave.size()) {
+                cout << "Error: el ID debe ser un numero entero.\n";
+                return;
+            }
+
+            bd->insertar(clave, datos);
+        }
+        catch (const invalid_argument&) {
+            cout << "Error: el ID debe ser un numero entero.\n";
+        }
+        catch (const out_of_range&) {
+            cout << "Error: el ID esta fuera del rango permitido.\n";
+        }
     } 
     else if (comando == "SELECT") {
         // Ejemplo esperado: SELECT * FROM tabla; o SELECT * FROM tabla WHERE id = 10;

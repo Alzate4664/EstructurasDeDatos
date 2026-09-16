@@ -22,6 +22,9 @@ private:
     // Convierte cualquier cadena a mayúsculas para evitar problemas de "Select" vs "SELECT"
     string aMayusculas(string cadena);
 
+    // Elimina espacios al principio y al final.
+    string recortar(string cadena);
+
 public:
     // Constructor que recibe el árbol B+ y lo guarda como atributo
     AnalizadorSQL(ArbolBPlus* base_datos);
