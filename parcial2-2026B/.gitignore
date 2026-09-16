@@ -1,0 +1,8 @@
+# Archivos objeto generados por el compilador
+*.o
+
+# Ejecutable del proyecto
+bd_sql
+
+# Archivo de persistencia generado durante las pruebas
+base_datos.txt
