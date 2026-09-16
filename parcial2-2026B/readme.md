@@ -83,4 +83,4 @@ El analizador debe soportar el siguiente subconjunto de comandos SQL, cada uno d
 3. **Metodología de Entrega:**
    * Empaquetar el código fuente (`.cpp`, `.h`, `Makefile`) en un único archivo comprimido `.zip`.
    * Es estrictamente obligatorio que **todos los integrantes del equipo** suban el archivo `.zip` al buzón correspondiente en EAFIT Interactiva para dejar evidencia individual.
-4. **Sustentación:** La entrega estará sujeta a una sustentación del código presentado, con énfasis en explicar la complejidad algorítmica de la operación de inserción.
+4. **Sustentación:** La entrega estará sujeta a una sustentación del código presentado, con énfasis en explicar la complejidad algorítmica de la operación de inserción. La sustentacion es por creación de un video corto o programación de una asesoria en la oficina 19-424 por citación del equipo de trabajo y confirmación d el profesor (Duración: 15 minutos)
