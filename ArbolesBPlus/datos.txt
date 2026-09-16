@@ -1,0 +1,13 @@
+10,Juan Perez,Madrid,1500.50
+12,Ana A,Medellin,2.10
+13,Teresa Tang,Corea,1.00
+15,Io Tang,Corea,1.10
+16,,e,1.00
+19,y,y,4.00
+20,Ana Gomez,Barcelona,2300.00
+30,Carlos Diaz,Sevilla,800.75
+40,Maria Lopez,Valencia,1250.00
+50,Luis Torres,Bilbao,3100.20
+98,w,w,2.00
+99,qq,qq,1.00
+100,Bb,Med,1.00
