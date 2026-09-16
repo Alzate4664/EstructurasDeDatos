@@ -298,8 +298,35 @@ string ArbolBPlus::buscar(int clave) {
     // 5. Al llegar a un nodo hoja (`es_hoja == true`), buscar el registro exacto.
     // 6. Si se encuentra, retornar `registro.datos`, de lo contrario retornar string vacío.
     
-    cout << "[Arbol B+] Buscando clave " << clave << " (NO IMPLEMENTADO)\n";
-    return ""; // Retornar cadena vacía temporalmente para que compile
+    if (raiz == nullptr) {
+        return "";
+    }
+
+    // Descender desde la raíz hasta la hoja correspondiente.
+    NodoBPlus* hoja = buscarHoja(clave);
+
+    if (hoja == nullptr) {
+        return "";
+    }
+
+    // Buscar la clave exacta dentro de la hoja.
+    size_t posicion = 0;
+
+    while (
+        posicion < hoja->claves.size() &&
+        hoja->claves[posicion] < clave
+    ) {
+        posicion++;
+    }
+
+    if (
+        posicion < hoja->claves.size() &&
+        hoja->claves[posicion] == clave
+    ) {
+        return hoja->registros[posicion].datos;
+    }
+
+    return "";
 }
 
 void ArbolBPlus::eliminar(int clave) {

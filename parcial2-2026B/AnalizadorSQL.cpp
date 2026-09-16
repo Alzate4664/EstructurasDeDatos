@@ -159,19 +159,84 @@ void AnalizadorSQL::analizarDQL_DML(string consulta, string comando) {
         }
     } 
     else if (comando == "SELECT") {
-        // Ejemplo esperado: SELECT * FROM tabla; o SELECT * FROM tabla WHERE id = 10;
-        
-        if (consulta.find("WHERE") != string::npos) {
-            // Si la consulta contiene la palabra WHERE, significa que es búsqueda por ID.
-            // 1. Extraer el ID (el número que está después del "=").
-            // 2. Ejecutar: string resultado = bd->buscar(id);
-            // 3. Imprimir el resultado en pantalla para que el usuario lo vea.
-            cout << "[Ejecutando DQL] -> Analizando SELECT con condición. (Debe llamar a ArbolBPlus::buscar)\n";
+        // Ejemplos:
+        // SELECT * FROM usuarios
+        // SELECT * FROM usuarios WHERE id = 10
+
+        string consultaMayuscula = aMayusculas(consulta);
+        size_t posicionWhere = consultaMayuscula.find("WHERE");
+
+        if (posicionWhere != string::npos) {
+            size_t posicionIgual = consulta.find(
+                '=',
+                posicionWhere
+            );
+
+            if (posicionIgual == string::npos) {
+                cout << "Error: la condicion WHERE debe contener '='.\n";
+                return;
+            }
+
+            string textoClave = recortar(
+                consulta.substr(posicionIgual + 1)
+            );
+
+            // Permitir el punto y coma final.
+            if (!textoClave.empty() && textoClave.back() == ';') {
+                textoClave.pop_back();
+                textoClave = recortar(textoClave);
+            }
+
+            if (textoClave.empty()) {
+                cout << "Error: debe indicar el ID que desea buscar.\n";
+                return;
+            }
+
+            try {
+                size_t caracteresProcesados = 0;
+                int clave = stoi(
+                    textoClave,
+                    &caracteresProcesados
+                );
+
+                if (caracteresProcesados != textoClave.size()) {
+                    cout << "Error: el ID debe ser un numero entero.\n";
+                    return;
+                }
+
+                string resultado = bd->buscar(clave);
+
+                if (resultado.empty()) {
+                    cout << "No se encontro un registro con el ID "
+                         << clave << ".\n";
+                } else {
+                    cout << "ID: " << clave
+                         << " | Datos: " << resultado << "\n";
+                }
+            }
+            catch (const invalid_argument&) {
+                cout << "Error: el ID debe ser un numero entero.\n";
+            }
+            catch (const out_of_range&) {
+                cout << "Error: el ID esta fuera del rango permitido.\n";
+            }
         } else {
-            // Si no tiene WHERE, es un barrido general de toda la base de datos (SELECT * FROM tabla).
-            // 1. Ejecutar: vector<Registro> resultados = bd->obtenerTodos();
-            // 2. Iterar y pintar todos los registros recuperados de las hojas del árbol.
-            cout << "[Ejecutando DQL] -> Analizando SELECT general. (Debe llamar a ArbolBPlus::obtenerTodos)\n";
+            vector<Registro> registros = bd->obtenerTodos();
+
+            if (registros.empty()) {
+                cout << "La tabla no contiene registros.\n";
+                return;
+            }
+
+            cout << "\n=== REGISTROS DE LA TABLA ===\n";
+
+            for (const Registro& registro : registros) {
+                cout << "ID: " << registro.clave
+                     << " | Datos: " << registro.datos << "\n";
+            }
+
+            cout << "Total de registros: "
+                 << registros.size() << "\n";
         }
     }
     else if (comando == "DELETE") {
