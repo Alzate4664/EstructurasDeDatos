@@ -27,6 +27,24 @@ NodoBPlus::NodoBPlus(bool hoja) {
 
 ArbolBPlus::ArbolBPlus(int _grado, string _nombre_archivo) : raiz(nullptr), grado(_grado), nombre_archivo(_nombre_archivo) {}
 
+NodoBPlus* ArbolBPlus::buscarHoja(int clave) {
+    NodoBPlus* cursor = raiz;
+
+    while (cursor != nullptr && !cursor->es_hoja) {
+        size_t posicion = 0;
+
+        while (
+            posicion < cursor->claves.size() &&
+            clave >= cursor->claves[posicion]
+        ) {
+            posicion++;
+        }
+
+        cursor = cursor->hijos[posicion];
+    }
+
+    return cursor;
+}
 
 // =========================================================================
 // MÉTODOS A IMPLEMENTAR PARA EL PARCIAL
@@ -47,8 +65,59 @@ void ArbolBPlus::insertar(int clave, string datos) {
     //    c) Promover la clave media hacia el nodo PADRE.
     //    d) Configurar el puntero "siguiente_hoja" para mantener la lista enlazada unida.
     // 6. Esta propagación puede subir recursivamente hasta la raíz, obligando a crear una nueva raíz si es necesario.
-    
-    cout << "[Arbol B+] Insertando clave " << clave << " con dato: " << datos << " (NO IMPLEMENTADO)\n";
+
+    // Caso 1: el árbol todavía está vacío.
+    if (raiz == nullptr) {
+        raiz = new NodoBPlus(true);
+        raiz->claves.push_back(clave);
+        raiz->registros.push_back({clave, datos});
+
+        cout << "Registro insertado correctamente.\n";
+        return;
+    }
+
+    // Buscar la hoja en la que debería quedar la clave.
+    NodoBPlus* hoja = buscarHoja(clave);
+
+    size_t posicion = 0;
+
+    while (
+        posicion < hoja->claves.size() &&
+        hoja->claves[posicion] < clave
+    ) {
+        posicion++;
+    }
+
+    // No permitir claves primarias repetidas.
+    if (
+        posicion < hoja->claves.size() &&
+        hoja->claves[posicion] == clave
+    ) {
+        cout << "Error: ya existe un registro con el ID "
+             << clave << ".\n";
+        return;
+    }
+
+    Registro nuevoRegistro{clave, datos};
+
+    // Insertar la clave y el registro en la misma posición.
+    hoja->claves.insert(
+        hoja->claves.begin() + posicion,
+        clave
+    );
+
+    hoja->registros.insert(
+        hoja->registros.begin() + posicion,
+        nuevoRegistro
+    );
+
+    cout << "Registro insertado correctamente.\n";
+
+    // Temporalmente, avisar cuando corresponda realizar el split.
+    if (hoja->claves.size() > static_cast<size_t>(grado)) {
+        cout << "[Pendiente] El nodo superó las " << grado
+             << " claves. Se debe realizar el split.\n";
+    }
 }
 
 string ArbolBPlus::buscar(int clave) {
@@ -89,7 +158,26 @@ vector<Registro> ArbolBPlus::obtenerTodos() {
     // 4. Repetir hasta que 'siguiente_hoja' sea nullptr.
     // Esto simula un comportamiento O(n) extremadamente rápido típico de las bases de datos (Full Table Scan).
     
-    cout << "[Arbol B+] Escaneando todos los registros secuencialmente (NO IMPLEMENTADO)\n";
+    if (raiz == nullptr) {
+        return resultado;
+    }
+
+    NodoBPlus* cursor = raiz;
+
+    // Llegar hasta la hoja situada más a la izquierda.
+    while (!cursor->es_hoja) {
+        cursor = cursor->hijos[0];
+    }
+
+    // Recorrer todas las hojas enlazadas.
+    while (cursor != nullptr) {
+        for (const Registro& registro : cursor->registros) {
+            resultado.push_back(registro);
+        }
+
+        cursor = cursor->siguiente_hoja;
+    }
+
     return resultado;
 }
 

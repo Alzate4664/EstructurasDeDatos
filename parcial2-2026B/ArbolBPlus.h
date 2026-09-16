@@ -54,12 +54,13 @@ struct NodoBPlus {
 class ArbolBPlus {
 private:
     NodoBPlus* raiz;        // Puntero a la raíz del árbol
-    int grado;              // Máximo número de claves/hijos por nodo (para disparar splits)
+    int grado;              // Máximo número de claves por nodo. Con grado 3, el split ocurre al insertar la cuarta clave.
     string nombre_archivo;  // Nombre del archivo .txt para guardar y cargar datos
 
     // Funciones auxiliares sugeridas para el estudiante que facilitan la recursión
     void insertarInterno(int clave, NodoBPlus* cursor, NodoBPlus* hijo);
     NodoBPlus* buscarPadre(NodoBPlus* cursor, NodoBPlus* hijo);
+    NodoBPlus* buscarHoja(int clave);
 
 public:
     // Constructor de la base de datos
