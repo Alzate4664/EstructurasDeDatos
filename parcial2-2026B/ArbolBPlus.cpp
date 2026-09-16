@@ -382,30 +382,34 @@ vector<Registro> ArbolBPlus::obtenerTodos() {
 
 void ArbolBPlus::guardarEnArchivo() {
     ofstream archivo(nombre_archivo);
-    
-    // Si no tenemos permisos o la ruta falla, abortamos
-    if (!archivo.is_open()) {
-        cerr << "Error al abrir el archivo " << nombre_archivo << endl;
-        return;
-    }
-    
+
     // [A IMPLEMENTAR EN EL PARCIAL]:
     // 1. Invocar 'obtenerTodos()' o hacer el recorrido manual de hojas.
     // 2. Por cada registro obtenido, llamar a 'registro.serializar()' y escribir esa cadena en el archivo.
     // 3. Añadir un salto de línea (endl) por cada registro.
     
-    cout << "[Persistencia] Guardando datos en " << nombre_archivo << " (NO IMPLEMENTADO)\n";
-    archivo.close();
-}
-
-void ArbolBPlus::cargarDesdeArchivo() {
-    ifstream archivo(nombre_archivo);
-    
-    // Si el archivo no existe (ej. es la primera vez que corre el programa), ignorar sin error grave.
     if (!archivo.is_open()) {
-        cout << "No existe archivo previo '" << nombre_archivo << "'. Se creará al guardar.\n";
+        cerr << "Error al abrir el archivo "
+             << nombre_archivo << ".\n";
         return;
     }
+
+    vector<Registro> registros = obtenerTodos();
+
+    for (const Registro& registro : registros) {
+        archivo << registro.serializar() << '\n';
+    }
+
+    archivo.close();
+
+    cout << "[Persistencia] Se guardaron "
+         << registros.size()
+         << " registros en "
+         << nombre_archivo << ".\n";
+}
+    
+void ArbolBPlus::cargarDesdeArchivo() {
+    ifstream archivo(nombre_archivo);
     
     // [A IMPLEMENTAR EN EL PARCIAL]:
     // 1. Leer línea por línea usando `getline(archivo, linea)`.
@@ -413,7 +417,70 @@ void ArbolBPlus::cargarDesdeArchivo() {
     // 3. Convertir la primera parte a entero (ID).
     // 4. Pasar la segunda parte como string (Datos).
     // 5. Llamar al método `insertar(id, datos)` del mismo árbol B+ para poblarlo en memoria RAM.
-    
-    cout << "[Persistencia] Cargando datos desde " << nombre_archivo << " (NO IMPLEMENTADO)\n";
+
+    if (!archivo.is_open()) {
+        cout << "No existe archivo previo '"
+             << nombre_archivo
+             << "'. Se creara al guardar.\n";
+        return;
+    }
+
+    string linea;
+    int registrosCargados = 0;
+    int numeroLinea = 0;
+
+    while (getline(archivo, linea)) {
+        numeroLinea++;
+
+        if (linea.empty()) {
+            continue;
+        }
+
+        // Solo la primera coma separa la clave de los datos.
+        // Los datos pueden contener comas adicionales.
+        size_t posicionComa = linea.find(',');
+
+        if (posicionComa == string::npos) {
+            cerr << "Advertencia: linea "
+                 << numeroLinea
+                 << " invalida en "
+                 << nombre_archivo << ".\n";
+            continue;
+        }
+
+        string textoClave = linea.substr(0, posicionComa);
+        string datos = linea.substr(posicionComa + 1);
+
+        try {
+            size_t caracteresProcesados = 0;
+            int clave = stoi(
+                textoClave,
+                &caracteresProcesados
+            );
+
+            if (caracteresProcesados != textoClave.size()) {
+                cerr << "Advertencia: ID invalido en la linea "
+                     << numeroLinea << ".\n";
+                continue;
+            }
+
+            insertar(clave, datos);
+            registrosCargados++;
+        }
+        catch (const invalid_argument&) {
+            cerr << "Advertencia: ID invalido en la linea "
+                 << numeroLinea << ".\n";
+        }
+        catch (const out_of_range&) {
+            cerr << "Advertencia: ID fuera de rango en la linea "
+                 << numeroLinea << ".\n";
+        }
+    }
+
     archivo.close();
+
+    cout << "[Persistencia] Se cargaron "
+         << registrosCargados
+         << " registros desde "
+         << nombre_archivo << ".\n";
 }
