@@ -3,7 +3,7 @@ CXXFLAGS = -Wall -std=c++11
 DEPFLAGS = -MMD -MP
 
 TARGET = bd_sql
-SRCS = main.cpp ArbolBPlus.cpp AnalizadorSQL.cpp
+SRCS = main.cpp ArbolBPlus.cpp IndiceSecundarioBPlus.cpp AnalizadorSQL.cpp
 OBJS = $(SRCS:.cpp=.o)
 DEPS = $(OBJS:.o=.d)
 

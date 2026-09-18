@@ -12,6 +12,7 @@
 #include <sstream>   // 'stringstream' permite partir un texto en palabras facilmente
 #include <vector>    // Uso de arrays dinamicos
 #include "ArbolBPlus.h" // Se requiere para poder despachar los comandos al arbol
+#include "IndiceSecundarioBPlus.h"
 
 using namespace std;
 
@@ -22,6 +23,15 @@ private:
     // Estado de la única tabla administrada por este motor
     bool tablaCreada;
     string nombreTabla;
+
+    // Índice secundario textual: nombre -> ID principal
+    IndiceSecundarioBPlus indiceSecundario;
+    bool indiceCreado;
+    string nombreIndice;
+    string columnaIndice;
+
+    // Extrae el primer campo de datos, que representa el nombre.
+    string extraerNombre(string datos);
 
     // Convierte cualquier cadena a mayúsculas para evitar problemas de "Select" vs "SELECT"
     string aMayusculas(string cadena);

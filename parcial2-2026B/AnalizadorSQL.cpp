@@ -9,7 +9,13 @@
 
 // Inicializa el analizador acoplando el puntero del árbol B+ que se pasó en el main
 AnalizadorSQL::AnalizadorSQL(ArbolBPlus* base_datos)
-    : bd(base_datos), tablaCreada(true), nombreTabla("usuarios") {}
+    : bd(base_datos),
+      tablaCreada(true),
+      nombreTabla("usuarios"),
+      indiceSecundario(3),
+      indiceCreado(false),
+      nombreIndice(""),
+      columnaIndice("") {}
 
 string AnalizadorSQL::aMayusculas(string cadena) {
     string cadenaMayus = "";
@@ -28,6 +34,16 @@ string AnalizadorSQL::recortar(string cadena) {
     size_t fin = cadena.find_last_not_of(" \t\r\n");
 
     return cadena.substr(inicio, fin - inicio + 1);
+}
+
+string AnalizadorSQL::extraerNombre(string datos) {
+    size_t posicionComa = datos.find(',');
+
+    if (posicionComa != string::npos) {
+        datos = datos.substr(0, posicionComa);
+    }
+
+    return recortar(datos);
 }
 
 void AnalizadorSQL::ejecutarConsulta(string consulta) {
@@ -70,9 +86,106 @@ void AnalizadorSQL::analizarDDL(string consulta, string comando) {
     // ==========================================
     if (comando == "CREATE") {
 
-        // CREATE INDEX se implementará en el siguiente paso.
         if (consultaMayuscula.find("CREATE INDEX") == 0) {
-            cout << "[Ejecutando DDL] -> Analizando creacion de INDICE secundario...\n";
+            stringstream ss(consultaLimpia);
+
+            string palabraCreate;
+            string palabraIndex;
+            string nombreNuevoIndice;
+            string palabraOn;
+            string tablaIndice;
+
+            ss >> palabraCreate
+               >> palabraIndex
+               >> nombreNuevoIndice
+               >> palabraOn
+               >> tablaIndice;
+
+            if (
+                aMayusculas(palabraIndex) != "INDEX" ||
+                nombreNuevoIndice.empty() ||
+                aMayusculas(palabraOn) != "ON" ||
+                tablaIndice.empty()
+            ) {
+                cout << "Error: sintaxis esperada: "
+                     << "CREATE INDEX <nombre> ON <tabla> (<columna>)\n";
+                return;
+            }
+
+            if (!tablaCreada) {
+                cout << "Error: no existe una tabla creada.\n";
+                return;
+            }
+
+            if (aMayusculas(tablaIndice) != aMayusculas(nombreTabla)) {
+                cout << "Error: la tabla '" << tablaIndice
+                     << "' no existe.\n";
+                return;
+            }
+
+            if (indiceCreado) {
+                cout << "Error: ya existe el indice '"
+                     << nombreIndice << "'.\n";
+                return;
+            }
+
+            size_t parentesisInicial = consultaLimpia.find('(');
+            size_t parentesisFinal = consultaLimpia.rfind(')');
+
+            if (
+                parentesisInicial == string::npos ||
+                parentesisFinal == string::npos ||
+                parentesisFinal <= parentesisInicial
+            ) {
+                cout << "Error: debe indicar la columna entre parentesis.\n";
+                return;
+            }
+
+            string columna = recortar(
+                consultaLimpia.substr(
+                    parentesisInicial + 1,
+                    parentesisFinal - parentesisInicial - 1
+                )
+            );
+
+            // En el modelo actual, los datos almacenan el nombre
+            // como primer campo textual.
+            if (aMayusculas(columna) != "NOMBRE") {
+                cout << "Error: actualmente solo se puede crear "
+                     << "un indice secundario sobre la columna nombre.\n";
+                return;
+            }
+
+            indiceSecundario.vaciar();
+
+            vector<Registro> registros = bd->obtenerTodos();
+
+            int registrosIndexados = 0;
+
+            for (const Registro& registro : registros) {
+                string nombre = extraerNombre(registro.datos);
+
+                if (!nombre.empty()) {
+                    indiceSecundario.insertar(
+                        nombre,
+                        registro.clave
+                    );
+
+                    registrosIndexados++;
+                }
+            }
+
+            indiceCreado = true;
+            nombreIndice = nombreNuevoIndice;
+            columnaIndice = columna;
+
+            cout << "Indice '" << nombreIndice
+                 << "' creado correctamente sobre "
+                 << nombreTabla << "(" << columnaIndice << ").\n";
+
+            cout << "Registros indexados: "
+                 << registrosIndexados << "\n";
+
             return;
         }
 
@@ -141,6 +254,11 @@ void AnalizadorSQL::analizarDDL(string consulta, string comando) {
 
         // Eliminar todos los registros y nodos del Árbol B+.
         bd->vaciar();
+
+        indiceSecundario.vaciar();
+        indiceCreado = false;
+        nombreIndice = "";
+        columnaIndice = "";
 
         // Sobrescribir el archivo de persistencia con la tabla vacía.
         bd->guardarEnArchivo();
@@ -258,7 +376,20 @@ void AnalizadorSQL::analizarDQL_DML(string consulta, string comando) {
                 return;
             }
 
+            bool yaExistia = !bd->buscar(clave).empty();
+
             bd->insertar(clave, datos);
+
+            if (!yaExistia && indiceCreado) {
+                string nombre = extraerNombre(datos);
+
+                if (!nombre.empty()) {
+                    indiceSecundario.insertar(
+                        nombre,
+                        clave
+                    );
+                }
+            }
         }
         catch (const invalid_argument&) {
             cout << "Error: el ID debe ser un numero entero.\n";
@@ -326,50 +457,121 @@ void AnalizadorSQL::analizarDQL_DML(string consulta, string comando) {
                 return;
             }
 
-            string textoClave = recortar(
+            string columnaWhere = recortar(
+                consulta.substr(
+                    posicionWhere + 5,
+                    posicionIgual - (posicionWhere + 5)
+                )
+            );
+
+            string valorWhere = recortar(
                 consulta.substr(posicionIgual + 1)
             );
 
-            // Permitir el punto y coma final.
-            if (!textoClave.empty() && textoClave.back() == ';') {
-                textoClave.pop_back();
-                textoClave = recortar(textoClave);
+            // Permitir punto y coma final.
+            if (!valorWhere.empty() && valorWhere.back() == ';') {
+                valorWhere.pop_back();
+                valorWhere = recortar(valorWhere);
             }
 
-            if (textoClave.empty()) {
-                cout << "Error: debe indicar el ID que desea buscar.\n";
+            if (valorWhere.empty()) {
+                cout << "Error: debe indicar un valor para buscar.\n";
                 return;
             }
 
-            try {
-                size_t caracteresProcesados = 0;
-                int clave = stoi(
-                    textoClave,
-                    &caracteresProcesados
-                );
+            // ==========================================
+            // WHERE id = ...
+            // ==========================================
+            if (aMayusculas(columnaWhere) == "ID") {
+                try {
+                    size_t caracteresProcesados = 0;
 
-                if (caracteresProcesados != textoClave.size()) {
+                    int clave = stoi(
+                        valorWhere,
+                        &caracteresProcesados
+                    );
+
+                    if (caracteresProcesados != valorWhere.size()) {
+                        cout << "Error: el ID debe ser un numero entero.\n";
+                        return;
+                    }
+
+                    string resultado = bd->buscar(clave);
+
+                    if (resultado.empty()) {
+                        cout << "No se encontro un registro con el ID "
+                     << clave << ".\n";
+                    } else {
+                        cout << "ID: " << clave
+                             << " | Datos: " << resultado << "\n";
+                    }
+                }
+                catch (const invalid_argument&) {
                     cout << "Error: el ID debe ser un numero entero.\n";
+                }
+                catch (const out_of_range&) {
+                    cout << "Error: el ID esta fuera del rango permitido.\n";
+                }
+
+                return;
+            }
+
+            // ==========================================
+            // WHERE nombre = ...
+            // ==========================================
+            if (aMayusculas(columnaWhere) == "NOMBRE") {
+                if (!indiceCreado) {
+                    cout << "Error: no existe un indice secundario "
+                         << "sobre nombre. Use CREATE INDEX primero.\n";
                     return;
                 }
 
-                string resultado = bd->buscar(clave);
-
-                if (resultado.empty()) {
-                    cout << "No se encontro un registro con el ID "
-                         << clave << ".\n";
-                } else {
-                    cout << "ID: " << clave
-                         << " | Datos: " << resultado << "\n";
+                // Quitar comillas alrededor del nombre.
+                if (
+                    valorWhere.size() >= 2 &&
+                    (
+                        (valorWhere.front() == '\'' &&
+                         valorWhere.back() == '\'') ||
+                        (valorWhere.front() == '"' &&
+                         valorWhere.back() == '"')
+                    )
+                ) {
+                    valorWhere = valorWhere.substr(
+                        1,
+                        valorWhere.size() - 2
+                    );
                 }
+
+                vector<int> ids =
+                    indiceSecundario.buscar(valorWhere);
+
+                if (ids.empty()) {
+                    cout << "No se encontraron registros con nombre '"
+                         << valorWhere << "'.\n";
+                    return;
+                }
+
+                cout << "\n=== RESULTADOS POR INDICE SECUNDARIO ===\n";
+
+                for (int id : ids) {
+                    string datos = bd->buscar(id);
+
+                    if (!datos.empty()) {
+                        cout << "ID: " << id
+                             << " | Datos: " << datos << "\n";
+                    }
+                }
+
+                cout << "Total de registros: "
+                     << ids.size() << "\n";
+
+                return;
             }
-            catch (const invalid_argument&) {
-                cout << "Error: el ID debe ser un numero entero.\n";
-            }
-            catch (const out_of_range&) {
-                cout << "Error: el ID esta fuera del rango permitido.\n";
-            }
-        } else {
+
+            cout << "Error: columna WHERE no soportada. "
+                 << "Use id o nombre.\n";
+        }
+        else {
             vector<Registro> registros = bd->obtenerTodos();
 
             if (registros.empty()) {
@@ -428,6 +630,9 @@ void AnalizadorSQL::mostrarAyuda() {
 
     cout << BOLD_CYAN << "    Sintaxis: SELECT * FROM <nombre> WHERE id = <id>" << RESET << "\n";
     cout << BOLD_GREEN << "    Ejemplo : SELECT * FROM usuarios WHERE id = 10" << RESET << "\n\n";
+
+    cout << BOLD_CYAN << "    Sintaxis: SELECT * FROM <nombre> WHERE nombre = '<nombre>'" << RESET << "\n";
+    cout << BOLD_GREEN << "    Ejemplo : SELECT * FROM usuarios WHERE nombre = 'Laura'" << RESET << "\n\n";
 
     cout << BOLD_CYAN << "    Sintaxis: DELETE FROM <nombre> WHERE id = <id>" << RESET << "\n";
     cout << BOLD_GREEN << "    Ejemplo : DELETE FROM usuarios WHERE id = 10" << RESET << "\n\n";
