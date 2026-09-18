@@ -32,6 +32,11 @@ ArbolBPlus::~ArbolBPlus() {
     raiz = nullptr;
 }
 
+void ArbolBPlus::vaciar() {
+    liberarNodo(raiz);
+    raiz = nullptr;
+}
+
 void ArbolBPlus::liberarNodo(NodoBPlus* nodo) {
     if (nodo == nullptr) {
         return;

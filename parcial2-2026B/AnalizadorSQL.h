@@ -19,6 +19,10 @@ class AnalizadorSQL {
 private:
     ArbolBPlus* bd; // Puntero a la base de datos instanciada en el main
 
+    // Estado de la única tabla administrada por este motor
+    bool tablaCreada;
+    string nombreTabla;
+
     // Convierte cualquier cadena a mayúsculas para evitar problemas de "Select" vs "SELECT"
     string aMayusculas(string cadena);
 

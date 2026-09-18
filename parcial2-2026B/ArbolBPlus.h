@@ -72,6 +72,9 @@ public:
     // Destructor: libera toda la memoria dinámica utilizada por el árbol
     ~ArbolBPlus();
 
+    // Elimina todos los nodos y registros del árbol sin destruir el objeto
+    void vaciar();
+
     // ==========================================
     // MÉTODOS A IMPLEMENTAR PARA EL PARCIAL
     // ==========================================

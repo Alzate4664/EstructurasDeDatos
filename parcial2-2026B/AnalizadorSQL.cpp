@@ -1,14 +1,15 @@
 /**
  * Archivo: AnalizadorSQL.cpp
- * Propósito: Implementación del Analizador Léxico y Sintáctico rudimentario. 
+ * Propósito: Implementación del Analizador Léxico y Sintáctico rudimentario.
  *            Este archivo procesa los strings ingresados por el usuario,
- *            extrae los tokens (como el ID o los datos a guardar) y llama a 
+ *            extrae los tokens (como el ID o los datos a guardar) y llama a
  *            las funciones del árbol (ArbolBPlus.h).
  */
 #include "AnalizadorSQL.h"
 
 // Inicializa el analizador acoplando el puntero del árbol B+ que se pasó en el main
-AnalizadorSQL::AnalizadorSQL(ArbolBPlus* base_datos) : bd(base_datos) {}
+AnalizadorSQL::AnalizadorSQL(ArbolBPlus* base_datos)
+    : bd(base_datos), tablaCreada(true), nombreTabla("usuarios") {}
 
 string AnalizadorSQL::aMayusculas(string cadena) {
     string cadenaMayus = "";
@@ -35,7 +36,7 @@ void AnalizadorSQL::ejecutarConsulta(string consulta) {
     // Stringstream permite leer palabras de un string separadas por espacios
     stringstream ss(consulta);
     string comando;
-    
+
     // Extrae la primera palabra (Ej. "INSERT", "SELECT")
     ss >> comando;
     comando = aMayusculas(comando); // Normalizamos a mayúsculas para las comparaciones
@@ -53,23 +54,102 @@ void AnalizadorSQL::ejecutarConsulta(string consulta) {
 }
 
 void AnalizadorSQL::analizarDDL(string consulta, string comando) {
+    string consultaLimpia = recortar(consulta);
     // [A IMPLEMENTAR EN EL PARCIAL]:
     // Ejemplo: CREATE TABLE usuarios (id INT, nombre STR);
-    
+    // Permitir punto y coma al final.
+    if (!consultaLimpia.empty() && consultaLimpia.back() == ';') {
+        consultaLimpia.pop_back();
+        consultaLimpia = recortar(consultaLimpia);
+    }
+
+    string consultaMayuscula = aMayusculas(consultaLimpia);
+
+    // ==========================================
+    // CREATE
+    // ==========================================
     if (comando == "CREATE") {
-        if (consulta.find("INDEX") != string::npos) {
-            // [A IMPLEMENTAR EN EL PARCIAL]: Lógica para índices secundarios
-            // Ejemplo: CREATE INDEX idx_nombre ON usuarios (nombre);
-            // Esto implicaría instanciar un SEGUNDO Árbol B+ donde la clave sea el "nombre" 
-            // y el valor sea el ID principal.
-            cout << "[Ejecutando DDL] -> Analizando creación de ÍNDICE secundario...\n";
-        } else {
-            // En una BBDD real, aquí se crearía el esquema de la tabla o se reservaría memoria en disco
-            cout << "[Ejecutando DDL] -> Analizando creación de TABLA...\n";
+
+        // CREATE INDEX se implementará en el siguiente paso.
+        if (consultaMayuscula.find("CREATE INDEX") == 0) {
+            cout << "[Ejecutando DDL] -> Analizando creacion de INDICE secundario...\n";
+            return;
         }
-    } else if (comando == "DROP") {
-        // Al eliminar una tabla, se debe limpiar el archivo en disco y limpiar los nodos RAM
-        cout << "[Ejecutando DDL] -> Analizando eliminación de tabla...\n";
+
+        stringstream ss(consultaLimpia);
+
+        string palabraCreate;
+        string palabraTable;
+        string nombre;
+
+        ss >> palabraCreate >> palabraTable >> nombre;
+
+        if (aMayusculas(palabraTable) != "TABLE" || nombre.empty()) {
+            cout << "Error: sintaxis esperada: "
+                 << "CREATE TABLE <nombre> (columnas...)\n";
+            return;
+        }
+
+        if (tablaCreada) {
+            if (aMayusculas(nombre) == aMayusculas(nombreTabla)) {
+                cout << "Error: la tabla '" << nombre
+                     << "' ya existe.\n";
+            } else {
+                cout << "Error: este motor administra una sola tabla a la vez. "
+                     << "Actualmente existe '" << nombreTabla << "'.\n";
+            }
+
+            return;
+        }
+
+        tablaCreada = true;
+        nombreTabla = nombre;
+
+        cout << "Tabla '" << nombreTabla
+             << "' creada correctamente.\n";
+
+        return;
+    }
+
+    // ==========================================
+    // DROP
+    // ==========================================
+    if (comando == "DROP") {
+        stringstream ss(consultaLimpia);
+
+        string palabraDrop;
+        string palabraTable;
+        string nombre;
+
+        ss >> palabraDrop >> palabraTable >> nombre;
+
+        if (aMayusculas(palabraTable) != "TABLE" || nombre.empty()) {
+            cout << "Error: sintaxis esperada: DROP TABLE <nombre>\n";
+            return;
+        }
+
+        if (!tablaCreada) {
+            cout << "Error: no existe ninguna tabla para eliminar.\n";
+            return;
+        }
+
+        if (aMayusculas(nombre) != aMayusculas(nombreTabla)) {
+            cout << "Error: la tabla '" << nombre
+                 << "' no existe.\n";
+            return;
+        }
+
+        // Eliminar todos los registros y nodos del Árbol B+.
+        bd->vaciar();
+
+        // Sobrescribir el archivo de persistencia con la tabla vacía.
+        bd->guardarEnArchivo();
+
+        tablaCreada = false;
+        nombreTabla = "";
+
+        cout << "Tabla '" << nombre
+             << "' eliminada correctamente.\n";
     }
 }
 
@@ -77,10 +157,39 @@ void AnalizadorSQL::analizarDQL_DML(string consulta, string comando) {
     // [A IMPLEMENTAR EN EL PARCIAL]:
     // Aquí el estudiante debe decidir cómo extraer los datos (id y contenido)
     // del string `consulta`. Puede usar manipulacion de strings (`find`, `substr`) o Expresiones Regulares (regex).
-    
+
     if (comando == "INSERT") {
         // Ejemplo esperado:
         // INSERT INTO usuarios VALUES (10, 'Juan Perez')
+
+        stringstream ssInsert(consulta);
+
+        string palabraInsert;
+        string palabraInto;
+        string tablaInsert;
+
+        ssInsert >> palabraInsert >> palabraInto >> tablaInsert;
+
+        if (
+            aMayusculas(palabraInto) != "INTO" ||
+            tablaInsert.empty()
+        ) {
+            cout << "Error: sintaxis esperada: "
+                 << "INSERT INTO <tabla> VALUES (...)\n";
+            return;
+        }
+
+        if (!tablaCreada) {
+            cout << "Error: no existe una tabla creada. "
+                 << "Use CREATE TABLE primero.\n";
+            return;
+        }
+
+        if (aMayusculas(tablaInsert) != aMayusculas(nombreTabla)) {
+            cout << "Error: la tabla '" << tablaInsert
+                 << "' no existe.\n";
+            return;
+        }
 
         string consultaMayuscula = aMayusculas(consulta);
         size_t posicionValues = consultaMayuscula.find("VALUES");
@@ -157,11 +266,51 @@ void AnalizadorSQL::analizarDQL_DML(string consulta, string comando) {
         catch (const out_of_range&) {
             cout << "Error: el ID esta fuera del rango permitido.\n";
         }
-    } 
+    }
     else if (comando == "SELECT") {
         // Ejemplos:
         // SELECT * FROM usuarios
         // SELECT * FROM usuarios WHERE id = 10
+
+        stringstream ssSelect(consulta);
+
+        string palabraSelect;
+        string asterisco;
+        string palabraFrom;
+        string tablaSelect;
+
+        ssSelect >> palabraSelect
+                 >> asterisco
+                 >> palabraFrom
+                 >> tablaSelect;
+
+        // SELECT * FROM usuarios;
+        // Quitar ; del nombre si viene inmediatamente después.
+        if (!tablaSelect.empty() && tablaSelect.back() == ';') {
+            tablaSelect.pop_back();
+        }
+
+        if (
+            asterisco != "*" ||
+            aMayusculas(palabraFrom) != "FROM" ||
+            tablaSelect.empty()
+        ) {
+            cout << "Error: sintaxis esperada: "
+                 << "SELECT * FROM <tabla>\n";
+            return;
+        }
+
+        if (!tablaCreada) {
+            cout << "Error: no existe una tabla creada. "
+                 << "Use CREATE TABLE primero.\n";
+            return;
+        }
+
+        if (aMayusculas(tablaSelect) != aMayusculas(nombreTabla)) {
+            cout << "Error: la tabla '" << tablaSelect
+                 << "' no existe.\n";
+            return;
+        }
 
         string consultaMayuscula = aMayusculas(consulta);
         size_t posicionWhere = consultaMayuscula.find("WHERE");
@@ -257,15 +406,15 @@ void AnalizadorSQL::mostrarAyuda() {
 
     cout << BOLD_YELLOW << "\n=== Sistema Gestor SQL basado en Árboles B+ ===" << RESET << "\n";
     cout << BOLD_WHITE << "Comandos Soportados (Esqueleto):" << RESET << "\n";
-    
+
     // Categoría DDL
     cout << BOLD_YELLOW << "  [DDL - Lenguaje de Definición de Datos]" << RESET << "\n";
     cout << BOLD_CYAN << "    Sintaxis: CREATE TABLE <nombre> (columnas...)" << RESET << "\n";
     cout << BOLD_GREEN << "    Ejemplo : CREATE TABLE usuarios (id INT, nombre STR)" << RESET << "\n\n";
-    
+
     cout << BOLD_CYAN << "    Sintaxis: CREATE INDEX <nombre> ON <tabla> (columna)" << RESET << "\n";
     cout << BOLD_GREEN << "    Ejemplo : CREATE INDEX idx_nombre ON usuarios (nombre)" << RESET << "\n\n";
-    
+
     cout << BOLD_CYAN << "    Sintaxis: DROP TABLE <nombre>" << RESET << "\n";
     cout << BOLD_GREEN << "    Ejemplo : DROP TABLE usuarios" << RESET << "\n\n";
 
@@ -273,16 +422,16 @@ void AnalizadorSQL::mostrarAyuda() {
     cout << BOLD_YELLOW << "  [DQL / DML - Manipulación y Consulta]" << RESET << "\n";
     cout << BOLD_CYAN << "    Sintaxis: INSERT INTO <nombre> VALUES (<id>, <datos>)" << RESET << "\n";
     cout << BOLD_GREEN << "    Ejemplo : INSERT INTO usuarios VALUES (10, 'Juan Perez, 25')" << RESET << "\n\n";
-    
+
     cout << BOLD_CYAN << "    Sintaxis: SELECT * FROM <nombre>" << RESET << "\n";
     cout << BOLD_GREEN << "    Ejemplo : SELECT * FROM usuarios" << RESET << "\n\n";
-    
+
     cout << BOLD_CYAN << "    Sintaxis: SELECT * FROM <nombre> WHERE id = <id>" << RESET << "\n";
     cout << BOLD_GREEN << "    Ejemplo : SELECT * FROM usuarios WHERE id = 10" << RESET << "\n\n";
-    
+
     cout << BOLD_CYAN << "    Sintaxis: DELETE FROM <nombre> WHERE id = <id>" << RESET << "\n";
     cout << BOLD_GREEN << "    Ejemplo : DELETE FROM usuarios WHERE id = 10" << RESET << "\n\n";
-    
+
     // Controles Base
     cout << BOLD_YELLOW << "  [Otros Comandos]" << RESET << "\n";
     cout << BOLD_CYAN << "    HELP  - Muestra este menu" << RESET << "\n";
