@@ -6,3 +6,4 @@ bd_sql
 
 # Archivo de persistencia generado durante las pruebas
 base_datos.txt
+*.d
