@@ -27,6 +27,26 @@ NodoBPlus::NodoBPlus(bool hoja) {
 
 ArbolBPlus::ArbolBPlus(int _grado, string _nombre_archivo) : raiz(nullptr), grado(_grado), nombre_archivo(_nombre_archivo) {}
 
+ArbolBPlus::~ArbolBPlus() {
+    liberarNodo(raiz);
+    raiz = nullptr;
+}
+
+void ArbolBPlus::liberarNodo(NodoBPlus* nodo) {
+    if (nodo == nullptr) {
+        return;
+    }
+
+    // Si es un nodo interno, primero liberar todos sus hijos.
+    if (!nodo->es_hoja) {
+        for (NodoBPlus* hijo : nodo->hijos) {
+            liberarNodo(hijo);
+        }
+    }
+
+    delete nodo;
+}
+
 NodoBPlus* ArbolBPlus::buscarHoja(int clave) {
     NodoBPlus* cursor = raiz;
 

@@ -62,9 +62,15 @@ private:
     NodoBPlus* buscarPadre(NodoBPlus* cursor, NodoBPlus* hijo);
     NodoBPlus* buscarHoja(int clave);
 
+    // Libera recursivamente todos los nodos del árbol
+    void liberarNodo(NodoBPlus* nodo);
+
 public:
     // Constructor de la base de datos
     ArbolBPlus(int _grado, string _nombre_archivo);
+
+    // Destructor: libera toda la memoria dinámica utilizada por el árbol
+    ~ArbolBPlus();
 
     // ==========================================
     // MÉTODOS A IMPLEMENTAR PARA EL PARCIAL
