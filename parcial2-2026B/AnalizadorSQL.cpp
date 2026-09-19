@@ -591,10 +591,163 @@ void AnalizadorSQL::analizarDQL_DML(string consulta, string comando) {
         }
     }
     else if (comando == "DELETE") {
-        // Ejemplo esperado: DELETE FROM tabla WHERE id = 10;
-        // 1. Extraer el ID después del "WHERE id = "
-        // 2. Ejecutar: bd->eliminar(id);
-        cout << "[Ejecutando DML] -> Analizando DELETE. (Debe llamar a ArbolBPlus::eliminar)\n";
+        // Sintaxis:
+        // DELETE FROM usuarios WHERE id = 10
+
+        stringstream ssDelete(consulta);
+
+        string palabraDelete;
+        string palabraFrom;
+        string tablaDelete;
+
+        ssDelete
+            >> palabraDelete
+            >> palabraFrom
+            >> tablaDelete;
+
+        if (
+            aMayusculas(palabraFrom) != "FROM" ||
+            tablaDelete.empty()
+        ) {
+            cout << "Error: sintaxis esperada: "
+                 << "DELETE FROM <tabla> WHERE id = <id>\n";
+            return;
+        }
+
+        if (!tablaCreada) {
+            cout << "Error: no existe una tabla creada. "
+                 << "Use CREATE TABLE primero.\n";
+            return;
+        }
+
+        if (
+            aMayusculas(tablaDelete) !=
+            aMayusculas(nombreTabla)
+        ) {
+            cout << "Error: la tabla '"
+                 << tablaDelete
+                 << "' no existe.\n";
+            return;
+        }
+
+        string consultaMayuscula =
+            aMayusculas(consulta);
+
+        size_t posicionWhere =
+            consultaMayuscula.find("WHERE");
+
+        if (posicionWhere == string::npos) {
+            cout << "Error: DELETE debe contener "
+                 << "una clausula WHERE.\n";
+            return;
+        }
+
+        size_t posicionIgual =
+            consulta.find('=', posicionWhere);
+
+        if (posicionIgual == string::npos) {
+            cout << "Error: la condicion WHERE "
+                 << "debe contener '='.\n";
+            return;
+        }
+
+        string columnaWhere = recortar(
+            consulta.substr(
+                posicionWhere + 5,
+                posicionIgual - (posicionWhere + 5)
+            )
+        );
+
+        if (aMayusculas(columnaWhere) != "ID") {
+            cout << "Error: DELETE actualmente "
+                 << "solo permite WHERE id = <id>.\n";
+            return;
+        }
+
+        string valorWhere = recortar(
+            consulta.substr(posicionIgual + 1)
+        );
+
+        if (
+            !valorWhere.empty() &&
+            valorWhere.back() == ';'
+        ) {
+            valorWhere.pop_back();
+            valorWhere = recortar(valorWhere);
+        }
+
+        if (valorWhere.empty()) {
+            cout << "Error: debe indicar el ID "
+                 << "a eliminar.\n";
+            return;
+        }
+
+        try {
+            size_t caracteresProcesados = 0;
+
+            int clave = stoi(
+                valorWhere,
+                &caracteresProcesados
+            );
+
+            if (
+                caracteresProcesados !=
+                valorWhere.size()
+            ) {
+                cout << "Error: el ID debe ser "
+                     << "un numero entero.\n";
+                return;
+            }
+
+            /*
+             * Verificar primero para evitar modificar
+             * el indice secundario si el ID no existe.
+             */
+            string datosExistentes =
+                bd->buscar(clave);
+
+            if (datosExistentes.empty()) {
+                cout << "No se encontro un registro "
+                     << "con el ID "
+                     << clave << ".\n";
+                return;
+            }
+
+            bd->eliminar(clave);
+
+            /*
+             * Si existe indice secundario, lo
+             * reconstruimos con los registros
+             * restantes para eliminar cualquier
+             * referencia al ID borrado.
+             */
+            if (indiceCreado) {
+                indiceSecundario.vaciar();
+
+                vector<Registro> registros =
+                    bd->obtenerTodos();
+
+                for (const Registro& registro : registros) {
+                    string nombre =
+                        extraerNombre(registro.datos);
+
+                    if (!nombre.empty()) {
+                        indiceSecundario.insertar(
+                            nombre,
+                            registro.clave
+                        );
+                    }
+                }
+            }
+        }
+        catch (const invalid_argument&) {
+            cout << "Error: el ID debe ser "
+                 << "un numero entero.\n";
+        }
+        catch (const out_of_range&) {
+            cout << "Error: el ID esta fuera "
+                 << "del rango permitido.\n";
+        }
     }
 }
 

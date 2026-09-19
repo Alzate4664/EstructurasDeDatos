@@ -65,6 +65,18 @@ private:
     // Libera recursivamente todos los nodos del árbol
     void liberarNodo(NodoBPlus* nodo);
 
+    // Obtiene la menor clave contenida en un subarbol.
+    int obtenerPrimeraClave(NodoBPlus* nodo);
+
+    // Reconstruye las claves separadoras de los nodos internos.
+    void recalcularSeparadores(NodoBPlus* nodo);
+
+    // Corrige underflow en una hoja mediante redistribucion o merge.
+    void rebalancearHoja(NodoBPlus* hoja);
+
+    // Corrige underflow en un nodo interno.
+    void rebalancearInterno(NodoBPlus* nodo);
+
 public:
     // Constructor de la base de datos
     ArbolBPlus(int _grado, string _nombre_archivo);

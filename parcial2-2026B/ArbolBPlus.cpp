@@ -101,6 +101,385 @@ NodoBPlus* ArbolBPlus::buscarPadre(
     return nullptr;
 }
 
+int ArbolBPlus::obtenerPrimeraClave(NodoBPlus* nodo) {
+    NodoBPlus* cursor = nodo;
+
+    while (cursor != nullptr && !cursor->es_hoja) {
+        if (cursor->hijos.empty()) {
+            return 0;
+        }
+
+        cursor = cursor->hijos.front();
+    }
+
+    if (cursor == nullptr || cursor->claves.empty()) {
+        return 0;
+    }
+
+    return cursor->claves.front();
+}
+
+void ArbolBPlus::recalcularSeparadores(NodoBPlus* nodo) {
+    if (nodo == nullptr || nodo->es_hoja) {
+        return;
+    }
+
+    for (NodoBPlus* hijo : nodo->hijos) {
+        recalcularSeparadores(hijo);
+    }
+
+    nodo->claves.clear();
+
+    /*
+     * En este Arbol B+, cada clave interna representa
+     * la menor clave del hijo situado a su derecha.
+     */
+    for (size_t i = 1; i < nodo->hijos.size(); i++) {
+        nodo->claves.push_back(
+            obtenerPrimeraClave(nodo->hijos[i])
+        );
+    }
+}
+
+void ArbolBPlus::rebalancearInterno(NodoBPlus* nodo) {
+    if (nodo == nullptr || nodo->es_hoja) {
+        return;
+    }
+
+    /*
+     * Caso especial de la raiz.
+     *
+     * Si despues de un merge solo queda un hijo,
+     * ese hijo pasa a ser la nueva raiz.
+     */
+    if (nodo == raiz) {
+        if (nodo->hijos.empty()) {
+            delete nodo;
+            raiz = nullptr;
+            return;
+        }
+
+        if (nodo->hijos.size() == 1) {
+            NodoBPlus* nuevaRaiz = nodo->hijos.front();
+
+            nodo->hijos.clear();
+            delete nodo;
+
+            raiz = nuevaRaiz;
+        }
+
+        if (raiz != nullptr) {
+            recalcularSeparadores(raiz);
+        }
+
+        return;
+    }
+
+    /*
+     * Un nodo interno con grado 3 admite hasta
+     * 4 hijos y debe conservar como minimo 2.
+     */
+    int minimoHijos = (grado + 2) / 2;
+
+    if (
+        static_cast<int>(nodo->hijos.size()) >=
+        minimoHijos
+    ) {
+        recalcularSeparadores(raiz);
+        return;
+    }
+
+    NodoBPlus* padre = buscarPadre(raiz, nodo);
+
+    if (padre == nullptr) {
+        return;
+    }
+
+    size_t posicion = 0;
+
+    while (
+        posicion < padre->hijos.size() &&
+        padre->hijos[posicion] != nodo
+    ) {
+        posicion++;
+    }
+
+    NodoBPlus* hermanoIzquierdo =
+        posicion > 0
+            ? padre->hijos[posicion - 1]
+            : nullptr;
+
+    NodoBPlus* hermanoDerecho =
+        posicion + 1 < padre->hijos.size()
+            ? padre->hijos[posicion + 1]
+            : nullptr;
+
+    // ==========================================
+    // Redistribuir desde el hermano izquierdo
+    // ==========================================
+    if (
+        hermanoIzquierdo != nullptr &&
+        static_cast<int>(
+            hermanoIzquierdo->hijos.size()
+        ) > minimoHijos
+    ) {
+        NodoBPlus* hijoPrestado =
+            hermanoIzquierdo->hijos.back();
+
+        hermanoIzquierdo->hijos.pop_back();
+
+        nodo->hijos.insert(
+            nodo->hijos.begin(),
+            hijoPrestado
+        );
+
+        recalcularSeparadores(raiz);
+        return;
+    }
+
+    // ==========================================
+    // Redistribuir desde el hermano derecho
+    // ==========================================
+    if (
+        hermanoDerecho != nullptr &&
+        static_cast<int>(
+            hermanoDerecho->hijos.size()
+        ) > minimoHijos
+    ) {
+        NodoBPlus* hijoPrestado =
+            hermanoDerecho->hijos.front();
+
+        hermanoDerecho->hijos.erase(
+            hermanoDerecho->hijos.begin()
+        );
+
+        nodo->hijos.push_back(hijoPrestado);
+
+        recalcularSeparadores(raiz);
+        return;
+    }
+
+    // ==========================================
+    // Merge con hermano izquierdo
+    // ==========================================
+    if (hermanoIzquierdo != nullptr) {
+        hermanoIzquierdo->hijos.insert(
+            hermanoIzquierdo->hijos.end(),
+            nodo->hijos.begin(),
+            nodo->hijos.end()
+        );
+
+        padre->hijos.erase(
+            padre->hijos.begin() + posicion
+        );
+
+        nodo->hijos.clear();
+        delete nodo;
+
+        recalcularSeparadores(padre);
+        rebalancearInterno(padre);
+
+        if (raiz != nullptr) {
+            recalcularSeparadores(raiz);
+        }
+
+        return;
+    }
+
+    // ==========================================
+    // Merge con hermano derecho
+    // ==========================================
+    if (hermanoDerecho != nullptr) {
+        nodo->hijos.insert(
+            nodo->hijos.end(),
+            hermanoDerecho->hijos.begin(),
+            hermanoDerecho->hijos.end()
+        );
+
+        padre->hijos.erase(
+            padre->hijos.begin() + posicion + 1
+        );
+
+        hermanoDerecho->hijos.clear();
+        delete hermanoDerecho;
+
+        recalcularSeparadores(padre);
+        rebalancearInterno(padre);
+
+        if (raiz != nullptr) {
+            recalcularSeparadores(raiz);
+        }
+    }
+}
+
+void ArbolBPlus::rebalancearHoja(NodoBPlus* hoja) {
+    if (hoja == nullptr || hoja == raiz) {
+        return;
+    }
+
+    /*
+     * Con grado 3 una hoja admite maximo 3 claves.
+     * El minimo normal despues de un split es 2.
+     */
+    int minimoClaves = (grado + 1) / 2;
+
+    if (
+        static_cast<int>(hoja->claves.size()) >=
+        minimoClaves
+    ) {
+        recalcularSeparadores(raiz);
+        return;
+    }
+
+    NodoBPlus* padre = buscarPadre(raiz, hoja);
+
+    if (padre == nullptr) {
+        return;
+    }
+
+    size_t posicion = 0;
+
+    while (
+        posicion < padre->hijos.size() &&
+        padre->hijos[posicion] != hoja
+    ) {
+        posicion++;
+    }
+
+    NodoBPlus* hermanoIzquierdo =
+        posicion > 0
+            ? padre->hijos[posicion - 1]
+            : nullptr;
+
+    NodoBPlus* hermanoDerecho =
+        posicion + 1 < padre->hijos.size()
+            ? padre->hijos[posicion + 1]
+            : nullptr;
+
+    // ==========================================
+    // Pedir prestado al hermano izquierdo
+    // ==========================================
+    if (
+        hermanoIzquierdo != nullptr &&
+        static_cast<int>(
+            hermanoIzquierdo->claves.size()
+        ) > minimoClaves
+    ) {
+        hoja->claves.insert(
+            hoja->claves.begin(),
+            hermanoIzquierdo->claves.back()
+        );
+
+        hoja->registros.insert(
+            hoja->registros.begin(),
+            hermanoIzquierdo->registros.back()
+        );
+
+        hermanoIzquierdo->claves.pop_back();
+        hermanoIzquierdo->registros.pop_back();
+
+        recalcularSeparadores(raiz);
+        return;
+    }
+
+    // ==========================================
+    // Pedir prestado al hermano derecho
+    // ==========================================
+    if (
+        hermanoDerecho != nullptr &&
+        static_cast<int>(
+            hermanoDerecho->claves.size()
+        ) > minimoClaves
+    ) {
+        hoja->claves.push_back(
+            hermanoDerecho->claves.front()
+        );
+
+        hoja->registros.push_back(
+            hermanoDerecho->registros.front()
+        );
+
+        hermanoDerecho->claves.erase(
+            hermanoDerecho->claves.begin()
+        );
+
+        hermanoDerecho->registros.erase(
+            hermanoDerecho->registros.begin()
+        );
+
+        recalcularSeparadores(raiz);
+        return;
+    }
+
+    // ==========================================
+    // Merge con hermano izquierdo
+    // ==========================================
+    if (hermanoIzquierdo != nullptr) {
+        hermanoIzquierdo->claves.insert(
+            hermanoIzquierdo->claves.end(),
+            hoja->claves.begin(),
+            hoja->claves.end()
+        );
+
+        hermanoIzquierdo->registros.insert(
+            hermanoIzquierdo->registros.end(),
+            hoja->registros.begin(),
+            hoja->registros.end()
+        );
+
+        hermanoIzquierdo->siguiente_hoja =
+            hoja->siguiente_hoja;
+
+        padre->hijos.erase(
+            padre->hijos.begin() + posicion
+        );
+
+        delete hoja;
+
+        recalcularSeparadores(padre);
+        rebalancearInterno(padre);
+
+        if (raiz != nullptr) {
+            recalcularSeparadores(raiz);
+        }
+
+        return;
+    }
+
+    // ==========================================
+    // Merge con hermano derecho
+    // ==========================================
+    if (hermanoDerecho != nullptr) {
+        hoja->claves.insert(
+            hoja->claves.end(),
+            hermanoDerecho->claves.begin(),
+            hermanoDerecho->claves.end()
+        );
+
+        hoja->registros.insert(
+            hoja->registros.end(),
+            hermanoDerecho->registros.begin(),
+            hermanoDerecho->registros.end()
+        );
+
+        hoja->siguiente_hoja =
+            hermanoDerecho->siguiente_hoja;
+
+        padre->hijos.erase(
+            padre->hijos.begin() + posicion + 1
+        );
+
+        delete hermanoDerecho;
+
+        recalcularSeparadores(padre);
+        rebalancearInterno(padre);
+
+        if (raiz != nullptr) {
+            recalcularSeparadores(raiz);
+        }
+    }
+}
+
 void ArbolBPlus::insertarInterno(
     int clave,
     NodoBPlus* cursor,
@@ -364,7 +743,70 @@ void ArbolBPlus::eliminar(int clave) {
     // 5. Si no se puede pedir prestado, hacer 'merge' (fusión) con el hermano, 
     //    y eliminar la clave divisora en el nodo padre.
     
-    cout << "[Arbol B+] Eliminando clave " << clave << " (NO IMPLEMENTADO)\n";
+    if (raiz == nullptr) {
+        cout << "Error: el arbol esta vacio.\n";
+        return;
+    }
+
+    NodoBPlus* hoja = buscarHoja(clave);
+
+    if (hoja == nullptr) {
+        cout << "Error: no se encontro el ID "
+             << clave << ".\n";
+        return;
+    }
+
+    size_t posicion = 0;
+
+    while (
+        posicion < hoja->claves.size() &&
+        hoja->claves[posicion] != clave
+    ) {
+        posicion++;
+    }
+
+    if (posicion == hoja->claves.size()) {
+        cout << "Error: no se encontro el ID "
+             << clave << ".\n";
+        return;
+    }
+
+    hoja->claves.erase(
+        hoja->claves.begin() + posicion
+    );
+
+    hoja->registros.erase(
+        hoja->registros.begin() + posicion
+    );
+
+    // Si la raiz tambien es hoja.
+    if (hoja == raiz) {
+        if (hoja->claves.empty()) {
+            delete raiz;
+            raiz = nullptr;
+        }
+
+        cout << "Registro con ID "
+             << clave
+             << " eliminado correctamente.\n";
+
+        return;
+    }
+
+    int minimoClaves = (grado + 1) / 2;
+
+    if (
+        static_cast<int>(hoja->claves.size()) <
+        minimoClaves
+    ) {
+        rebalancearHoja(hoja);
+    } else {
+        recalcularSeparadores(raiz);
+    }
+
+    cout << "Registro con ID "
+         << clave
+         << " eliminado correctamente.\n";
 }
 
 vector<Registro> ArbolBPlus::obtenerTodos() {
